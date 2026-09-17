@@ -468,7 +468,7 @@ async def game_timer(channel, channel_id):
     await asyncio.sleep(7)
     if channel_id in active_games:
         del active_games[channel_id]
-        await channel.send("⏱️ **انتهى الوقت!** لم يقم أحد بالإجابة الصحيحة.")
+        await channel.send(" **  انتهى الوقت ** لم يقم أحد بالإجابة الصحيحة الي بعقلي .")
 
 # --- 7. الأحداث والأوامر ---
 @bot.event
@@ -502,7 +502,7 @@ async def on_message(message):
     if text.lower() in ["top", "توب", "توب نقاط", "توب النقاط", "-top", "-توب"]:
         current_points = load_points()
         if not current_points:
-            await message.channel.send("⚠️ لا توجد أي نقاط مسجلة حتى الآن!")
+            await message.channel.send(" لا توجد أي نقاط مسجلة حتى الآن ")
             return
 
         sorted_users = sorted(current_points.items(), key=lambda x: x[1], reverse=True)
@@ -522,7 +522,7 @@ async def on_message(message):
 
     # --- أمر روليت ---
     if text in ["روليت", "-روليت"]:
-        await message.channel.send("قريباً.")
+        await message.channel.send(" قريباً ياحج ")
         return
 
     # --- أمر إيقاف اللعبة ---
@@ -532,9 +532,9 @@ async def on_message(message):
             if task and not task.done():
                 task.cancel()
             del active_games[channel_id]
-            await message.channel.send("🛑 تم إيقاف اللعبة الحالية.")
+            await message.channel.send(" تم إيقاف اللعبة الحالية .")
         else:
-            await message.channel.send("⚠️ لا توجد لعبة شغالّة حالياً في هذه الروم.")
+            await message.channel.send(" لا توجد لعبة شغالّة حالياً في هذه الروم .")
         return
 
     # --- التحقق من الأجوبة وإضافة النقاط (عشوائي من 1 إلى 10) ---
@@ -551,8 +551,8 @@ async def on_message(message):
             total_pts = add_user_points(message.author.id, earned_points)
 
             await message.channel.send(
-                f"• {message.author.mention} ☝🏻 إجابتك صحيحة!\n"
-                f"⭐ حصلت على **{earned_points}** نقطة! (إجمالي نقاطك: **{total_pts}** نقطة)"
+                f"• {message.author.mention} ☝🏻 إجابتك صحيحة \n"
+                f"✨ حصلت على **{earned_points}** نقطة  إجمالي نقاطك : **{total_pts}** نقطة "
             )
             return
 
@@ -560,7 +560,7 @@ async def on_message(message):
     clean_command = text.lstrip("-")
     if clean_command in GAMES_DATA:
         if channel_id in active_games:
-            await message.channel.send("⚠️ هناك لعبة جارية بالفعل في هذه الروم أكملها أو اكتب **إيقاف** لإنهائها.")
+            await message.channel.send(" هناك لعبة جارية بالفعل في هذه الروم أكملها أو اكتب **إيقاف** لإنهائها .")
             return
 
         item = random.choice(GAMES_DATA[clean_command])
