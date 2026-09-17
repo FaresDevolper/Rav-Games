@@ -11,7 +11,7 @@ import requests
 from PIL import Image, ImageDraw, ImageFont
 import arabic_reshaper
 
-# --- 1. سيرفر Flask لضمان العمل المستمر ---
+# --- 1. سيرفر Flask لضمان العمل المستمر على Render ---
 app = Flask('')
 
 @app.route('/')
@@ -47,16 +47,16 @@ def save_points(points_data):
     except Exception as e:
         print(f"Error saving points file: {e}")
 
-user_points = load_points()
-
 def add_user_points(user_id, points_to_add):
+    current_points = load_points()
     uid = str(user_id)
-    user_points[uid] = user_points.get(uid, 0) + points_to_add
-    save_points(user_points)
-    return user_points[uid]
+    current_points[uid] = current_points.get(uid, 0) + points_to_add
+    save_points(current_points)
+    return current_points[uid]
 
 def get_user_points(user_id):
-    return user_points.get(str(user_id), 0)
+    current_points = load_points()
+    return current_points.get(str(user_id), 0)
 
 # --- 3. إعدادات البوت والـ Intents ---
 intents = discord.Intents.default()
@@ -69,8 +69,8 @@ bot = commands.Bot(command_prefix="-", intents=intents)
 FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/amiri/Amiri-Bold.ttf"
 CACHED_FONT_BYTES = None
 
-# رابط صورتك الخاصة لخلفية قائمة التوب
 BACKGROUND_IMAGE_URL = "https://cdn.discordapp.com/attachments/1339684080224174141/1550213616387493888/IMG_9162.jpg?ex=6aad846f&is=6aac32ef&hm=8cbfa43dfc41535347d197d8adc9285f54d406fe8bd283ae19c7fad8b5851bbc"
+
 def get_arabic_font(size):
     global CACHED_FONT_BYTES
     try:
@@ -90,7 +90,7 @@ def get_arabic_font(size):
 
 active_games = {} # {channel_id: {"game": "...", "answers": [...], "task": Task}}
 
-# --- 4. قاعدة البيانات الضخمة للألعاب ---
+# --- 4. قاعدة البيانات الشاملة للألعاب ---
 GAMES_DATA = {
     "حيوان": [
         {"prompt": "بحرف أ", "answers": ["أسد", "أرنب", "أفعى", "أبو بريص", "أربد"]},
@@ -277,10 +277,124 @@ GAMES_DATA = {
         {"prompt": "فعالية", "answers": ["فعالية"]},
         {"prompt": "حماس", "answers": ["حماس"]},
         {"prompt": "نصر", "answers": ["نصر"]}
+    ],
+    "عواصم": [
+        {"prompt": "السعودية", "answers": ["الرياض"]},
+        {"prompt": "الكويت", "answers": ["الكويت"]},
+        {"prompt": "الإمارات", "answers": ["أبوظبي", "ابوظبي"]},
+        {"prompt": "قطر", "answers": ["الدوحة"]},
+        {"prompt": "البحرين", "answers": ["المنامة"]},
+        {"prompt": "عمان", "answers": ["مسقط"]},
+        {"prompt": "مصر", "answers": ["القاهرة"]},
+        {"prompt": "الأردن", "answers": ["عمان"]},
+        {"prompt": "العراق", "answers": ["بغداد"]},
+        {"prompt": "لبنان", "answers": ["بيروت"]},
+        {"prompt": "سوريا", "answers": ["دمشق"]},
+        {"prompt": "المغرب", "answers": ["الرباط"]},
+        {"prompt": "الجزائر", "answers": ["الجزائر"]},
+        {"prompt": "تونس", "answers": ["تونس"]},
+        {"prompt": "السودان", "answers": ["الخرطوم"]},
+        {"prompt": "فرنسا", "answers": ["باريس"]},
+        {"prompt": "بريطانيا", "answers": ["لندن"]},
+        {"prompt": "ألمانيا", "answers": ["برلين"]},
+        {"prompt": "إيطاليا", "answers": ["روما"]},
+        {"prompt": "إسبانيا", "answers": ["مدريد"]},
+        {"prompt": "تركيا", "answers": ["أنقرة", "انقرة"]},
+        {"prompt": "اليابان", "answers": ["طوكيو"]},
+        {"prompt": "الصين", "answers": ["بكين"]},
+        {"prompt": "روسيا", "answers": ["مسكوك", "موسكو"]},
+        {"prompt": "أمريكا", "answers": ["واشنطن"]},
+        {"prompt": "كندا", "answers": ["أوتاوا", "اوتاوا"]},
+        {"prompt": "البرازيل", "answers": ["برازيليا"]},
+        {"prompt": "الأرجنتين", "answers": ["بيونس ايرس", "بوينس آيرس"]},
+        {"prompt": "الهند", "answers": ["نيودلهي", "نيو دلهي"]},
+        {"prompt": "باكستان", "answers": ["إسلام آباد", "اسلام اباد"]},
+        {"prompt": "إندونيسيا", "answers": ["جاكرتا"]},
+        {"prompt": "ماليزيا", "answers": ["كوالالمبور"]},
+        {"prompt": "اليونان", "answers": ["أثينا", "اثينا"]},
+        {"prompt": "السويد", "answers": ["ستوكهولم"]},
+        {"prompt": "النرويج", "answers": ["أوسلو", "اوسلو"]},
+        {"prompt": "مكسيكو", "answers": ["مكسيكو سيتي"]},
+        {"prompt": "استراليا", "answers": ["كانبرا"]}
+    ],
+    "فكك": [
+        {"prompt": "سعودية", "answers": ["س ع و د ي ة", "س ع و د ي ه"]},
+        {"prompt": "دسكورد", "answers": ["د س ك و ر د"]},
+        {"prompt": "كمبيوتر", "answers": ["ك م ب ي و ت ر"]},
+        {"prompt": "سيارة", "answers": ["س ي ا ر ة", "س ي ا ر ه"]},
+        {"prompt": "طائرة", "answers": ["ط ا ئ ر ة", "ط ا ئ ر ه"]},
+        {"prompt": "برمجة", "answers": ["ب ر م ج ة", "ب ر م ج ه"]},
+        {"prompt": "مستقبل", "answers": ["م س ت ق ب ل"]},
+        {"prompt": "تحديات", "answers": ["ت ح د ي ا ت"]},
+        {"prompt": "بطولة", "answers": ["ب ط و ل ة", "ب ط و ل ه"]},
+        {"prompt": "انتصار", "answers": ["ا ن ت ص ا ر"]},
+        {"prompt": "لاعبين", "answers": ["ل ا ع ب ي ن"]},
+        {"prompt": "مجتمع", "answers": ["م ج ت م ع"]},
+        {"prompt": "مفتاح", "answers": ["م ف ت ا ح"]},
+        {"prompt": "شاشة", "answers": ["ش ا ش ة", "ش ا ش ه"]},
+        {"prompt": "تلفاز", "answers": ["ت ل ف ا ز"]},
+        {"prompt": "سيرفر", "answers": ["س ي ر ف ر"]},
+        {"prompt": "سماعة", "answers": ["س م ا ع ة", "س م ا ع ه"]},
+        {"prompt": "ماوس", "answers": ["م ا و س"]},
+        {"prompt": "كيبورد", "answers": ["ك ي ب و ر د"]},
+        {"prompt": "انترنت", "answers": ["ا ن ت ر ن ت"]},
+        {"prompt": "معالج", "answers": ["م ع ا ل ج"]},
+        {"prompt": "مملكة", "answers": ["م م ل ك ة", "م م ل ك ه"]},
+        {"prompt": "عاصمة", "answers": ["ع ا ص م ة", "ع ا ص م ه"]},
+        {"prompt": "مدرسة", "answers": ["م د ر س ة", "م د ر س ه"]},
+        {"prompt": "جامعة", "answers": ["ج ا م ع ة", "ج ا م ع ه"]},
+        {"prompt": "طاولة", "answers": ["ط ا و ل ة", "ط ا و ل ه"]},
+        {"prompt": "دفتر", "answers": ["د ف ت ر"]},
+        {"prompt": "قلم", "answers": ["ق ل م"]},
+        {"prompt": "حقيبة", "answers": ["ح ق ي ب ة", "ح ق ي ب ه"]},
+        {"prompt": "نافذة", "answers": ["ن ا ف ذ ة", "ن ا ف ذ ه"]},
+        {"prompt": "تفاحة", "answers": ["ت ف ا ح ة", "ت ف ا ح ه"]},
+        {"prompt": "برتقال", "answers": ["ب ر ت ق ا ل"]},
+        {"prompt": "فراولة", "answers": ["ف ر ا و ل ة", "ف ر ا و ل ه"]},
+        {"prompt": "رياضة", "answers": ["ر ي ا ض ة", "ر ي ا ض ه"]},
+        {"prompt": "سباحة", "answers": ["س ب ا ح ة", "س ب ا ح ه"]},
+        {"prompt": "فروسية", "answers": ["ف ر و س ي ة", "ف ر و س ي ه"]}
+    ],
+    "كتوويت": [
+        {"prompt": "شخص تحب تتهاوش معه دائماً؟", "answers": ["صديقي", "اخوي", "اختي", "امي", "ابوي", "خويي", "نفسي"]},
+        {"prompt": "اكثر شيء يرفع ضغطك بجمعات العائلات؟", "answers": ["الاطفال", "الاسئلة", "الإزعاج", "الازعاج", "المقارنات", "النقد"]},
+        {"prompt": "اكثر تطبيق تضيع وقتك فيه؟", "answers": ["تيك توك", "تيكتوك", "تويتر", "انستقرام", "سناب", "يوتيوب", "ديسكورد"]},
+        {"prompt": "شنو اكلتك المفضل بالليل؟", "answers": ["اندومي", "شاورما", "برجر", "بيتزا", "بطاطس", "شبس"]},
+        {"prompt": "لو عطوك مليون ريال الحين وش تسوي؟", "answers": ["اسافر", "اشتري سيارة", "استثمر", "اشتري بيت", "أنام", "انام"]},
+        {"prompt": "صفة تكرهها بالناس؟", "answers": ["الكذب", "النفاق", "التكبر", "الخيانة", "البخل", "الثرثرة"]},
+        {"prompt": "اكثر شيء تخاف منه؟", "answers": ["المستقبل", "الظلام", "الحشرات", "الفشل", "الفقدان", "الوحدة"]},
+        {"prompt": "شنو مشروبك المفضل بالشتاء؟", "answers": ["كرك", "قهوة", "شاي", "سحلب", "هوت شوكلت"]},
+        {"prompt": "كلمة تقولها دائماً بدون ما تحس؟", "answers": ["يعني", "هلا", "والله", "تخيل", "طيب", "اصلاً"]},
+        {"prompt": "افضل فصل بالسنة بالنسبة لك؟", "answers": ["الشتاء", "الصيف", "الربيع", "الخريف"]},
+        {"prompt": "اكثر شيء يسعدك بسرعة؟", "answers": ["الأكل", "الاكل", "النوم", "الفلوس", "السفر", "طلعة"]},
+        {"prompt": "لو بيدك تغير اسمك وش تخليه؟", "answers": ["نفسه", "ما اغيره", "ماغيره", "اسم ثاني"]},
+        {"prompt": "وش نظام نومك حالياً؟", "answers": ["مخيس", "معطوب", "ممتاز", "معكوس", "تعبان"]},
+        {"prompt": "شيء مستحيل تتنازل عنه؟", "answers": ["كرامتي", "نومي", "أكلي", "اكلي", "جوالي", "جهاي"]},
+        {"prompt": "أفضل وقت للروقان؟", "answers": ["الليل", "الفجر", "الصبح", "العصر"]},
+        {"prompt": "شي تموت وتعرفه عن المستقبل؟", "answers": ["وظيفتي", "زواجي", "ثروتي", "مستقبلي"]},
+        {"prompt": "كم ساعة تقعد على الجوال؟", "answers": ["كثير", "طول اليوم", "5 ساعات", "8 ساعات", "24 ساعة"]},
+        {"prompt": "اكثر لون تحبه؟", "answers": ["أسود", "اسود", "أزرق", "ازرق", "أبيض", "ابيض", "احمر"]},
+        {"prompt": "اكثر رياضة تحب تتابعها؟", "answers": ["كرة القدم", "كورة", "كرة السلة", "فورمولا", "تنس"]},
+        {"prompt": "شيء تبيه يتحقق هالسنة؟", "answers": ["النجاح", "الفلوس", "السفر", "تخرج", "سيارة"]},
+        {"prompt": "نوع سيارتك الحلم؟", "answers": ["روزرايز", "مرسيدس", "لكزس", "شارجر", "موستنج", "جي كلاس"]},
+        {"prompt": "أصعب مادة دراسية؟", "answers": ["الرياضيات", "الفيزياء", "الكيمياء", "الإنجليزي", "الانجليزي"]},
+        {"prompt": "اكثر كلمة تسمعها بالبيت؟", "answers": ["قوم", "نظف", "جيب", "طفي", "ذاكر", "تعال"]},
+        {"prompt": "أجمل مدينة زرتها؟", "answers": ["مكة", "الرياض", "جدة", "دبي", "أبها", "ابها", "الخبر"]},
+        {"prompt": "نوع فيلمك المفضل؟", "answers": ["رعب", "أكشن", "اكشن", "كوميدي", "دراما", "غموض"]},
+        {"prompt": "أحلى شعور بالنسبة لك؟", "answers": ["النوم", "الراحة", "النجاح", "الفوز", "الإجازة", "الاجازة"]},
+        {"prompt": "شيء تحب تسويه وأنت طفشان؟", "answers": ["أنام", "انام", "آكل", "اكل", "العب", "أتابع", "اتابع"]},
+        {"prompt": "أكثر شيء يضيع فلوسك؟", "answers": ["المطاعم", "القهوة", "الملابس", "الألعاب", "العاب"]},
+        {"prompt": "شنو تسوي أول ما تقوم من النوم؟", "answers": ["أشوف الجوال", "اشوف الجوال", "أغسل", "اغسل", "أصلي", "اصلي"]},
+        {"prompt": "لو ترجع بالزمن وش تعدل؟", "answers": ["ولا شيء", "قراراتي", "اغلاطي", "دراستي"]},
+        {"prompt": "اكثر أكلة شعبية تحبها؟", "answers": ["كبسة", "جريش", "قرصان", "مظبي", "مندي", "سليق"]},
+        {"prompt": "شيء تحس إنك مبدع فيه؟", "answers": ["الألعاب", "العاب", "الرسم", "الطبخ", "النوم", "الحديث"]},
+        {"prompt": "لو خيروك بين السفر أو الفلوس؟", "answers": ["الفلوس", "فلوس", "السفر", "سفر"]},
+        {"prompt": "اكثر شيء يخليك تبتسم؟", "answers": ["رسالة", "هدية", "أكل", "اكل", "فلوس", "ضحكة"]},
+        {"prompt": "أفضل حلوى عندك؟", "answers": ["كيك", "دونات", "آيس كريم", "ايس كريم", "كنافة", "بسبوسة"]}
     ]
 }
 
-# --- 5. معالجة النصوص ورسم صور الألعاب والتوب ---
+# --- 5. معالجة النصوص ورسم الصور ---
 def process_arabic_text(text):
     return arabic_reshaper.reshape(text)
 
@@ -323,7 +437,6 @@ def generate_top_image(top_users_data):
 
     img = img.resize((800, 600))
     
-    # خلفية شفافة لسهولة قراءة الأسماء
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw_overlay = ImageDraw.Draw(overlay)
     draw_overlay.rectangle([70, 80, 730, 530], fill=(0, 0, 0, 160))
@@ -375,7 +488,7 @@ async def on_message(message):
         games_list = "🎮 **قائمة الألعاب المتوفرة:**\n"
         for g in GAMES_DATA.keys():
             games_list += f"• `{g}`\n"
-        games_list += "\nلتشغيل أي لعبة، اكتب اسم اللعبة مباشرة في الروم (مثال: `حيوان` أو `جماد`).\nلديك **7 ثوانٍ** فقط للإجابة.\nلمعرفة نقاطك اكتب `نقاطي`.\nلعرض التوب اكتب `top` أو `توب`.\nلإيقاف أي لعبة جارية، اكتب `إيقاف`."
+        games_list += "\nلتشغيل أي لعبة، اكتب اسم اللعبة مباشرة في الروم (مثال: `حيوان` أو `عواصم` أو `فكك`).\nلديك **7 ثوانٍ** فقط للإجابة.\nلمعرفة نقاطك اكتب `نقاطي`.\nلعرض التوب اكتب `top` أو `توب`.\nلإيقاف أي لعبة جارية، اكتب `إيقاف`."
         await message.channel.send(games_list)
         return
 
@@ -387,11 +500,12 @@ async def on_message(message):
 
     # --- أمر التوب بالصورة الديناميكية ---
     if text.lower() in ["top", "توب", "توب نقاط", "توب النقاط", "-top", "-توب"]:
-        if not user_points:
+        current_points = load_points()
+        if not current_points:
             await message.channel.send("⚠️ لا توجد أي نقاط مسجلة حتى الآن!")
             return
 
-        sorted_users = sorted(user_points.items(), key=lambda x: x[1], reverse=True)
+        sorted_users = sorted(current_points.items(), key=lambda x: x[1], reverse=True)
 
         top_data = []
         for uid, pts in sorted_users[:10]:
@@ -423,7 +537,7 @@ async def on_message(message):
             await message.channel.send("⚠️ لا توجد لعبة شغالّة حالياً في هذه الروم.")
         return
 
-    # --- التحقق من الأجوبة وإضافة النقاط ---
+    # --- التحقق من الأجوبة وإضافة النقاط (عشوائي من 1 إلى 10) ---
     if channel_id in active_games:
         game_info = active_games[channel_id]
         if text in game_info["answers"]:
@@ -432,7 +546,8 @@ async def on_message(message):
                 task.cancel()
             del active_games[channel_id]
 
-            earned_points = random.randint(10, 30)
+            # اختيار عدد نقاط عشوائي بين 1 و 10 نقاط
+            earned_points = random.randint(1, 10)
             total_pts = add_user_points(message.author.id, earned_points)
 
             await message.channel.send(
@@ -472,4 +587,5 @@ async def on_message(message):
 keep_alive()
 TOKEN = os.getenv("DISCORD_TOKEN")
 if TOKEN:
+    bot.run(TOKEN)
     bot.run(TOKEN)
