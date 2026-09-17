@@ -319,7 +319,7 @@ async def game_timer(channel, channel_id):
     await asyncio.sleep(7)
     if channel_id in active_games:
         del active_games[channel_id]
-        await channel.send("⏱️ **انتهى الوقت!** لم يقم أحد بالإجابة الصحيحة.")
+        await channel.send(" **انتهى الوقت!** لم يقم أحد بالإجابة الصحيحة .")
 
 # --- 7. الأحداث والأوامر ---
 @bot.event
@@ -339,18 +339,18 @@ async def on_message(message):
         games_list = "🎮 ** قائمة الألعاب المتوفرة :**\n"
         for g in GAMES_DATA.keys():
             games_list += f"• `{g}`\n"
-        games_list += "\nلتشغيل أي لعبة، اكتب اسم اللعبة مباشرة في الروم (مثال: `حيوان` أو `جماد`) .\n⏱️ لديك **7 ثوانٍ** فقط للإجابة!\n🎯 لمعرفة نقاطك اكتب `نقاطي`. \nلإيقاف أي لعبة جارية ، اكتب `إيقاف`."
+        games_list += "\nلتشغيل أي لعبة، اكتب اسم اللعبة مباشرة في الروم (مثال : `حيوان` أو `جماد`) .\n لديك **7 ثوانٍ** فقط للإجابة \n لمعرفة نقاطك اكتب `نقاطي`. \nلإيقاف أي لعبة جارية ، اكتب `إيقاف`."
         await message.channel.send(games_list)
         return
 
     # --- أمر عرض نقاط العضو ---
     if text in ["نقاطي", "-نقاطي"]:
         pts = get_user_points(message.author.id)
-        await message.channel.send(f"🏆 {message.author.mention} نقاطك هي: **{pts}** نقطة.")
+        await message.channel.send(f" {message.author.mention} نقاطك هي : **{pts}** نقطة .")
         return
 
     # --- أمر إيقاف اللعبة ---
-    if text in ["إيقاف", "ايقاف", "وقف"]:
+    if text in ["إيقاف", "ايقاف", ""]:
         if channel_id in active_games:
             task = active_games[channel_id].get("task")
             if task and not task.done():
@@ -377,7 +377,7 @@ async def on_message(message):
 
             await message.channel.send(
                 f"• {message.author.mention} ☝🏻 إجابتك صحيحة!\n"
-                f"🎁 حصلت على **{earned_points}** نقطة! (إجمالي نقاطك: **{total_pts}** نقطة)"
+                f"⭐ حصلت على **{earned_points}** نقطة! (إجمالي نقاطك: **{total_pts}** نقطة)"
             )
             return
 
@@ -385,7 +385,7 @@ async def on_message(message):
     clean_command = text.lstrip("-")
     if clean_command in GAMES_DATA:
         if channel_id in active_games:
-            await message.channel.send(" هناك لعبة جارية بالفعل في هذه الروم أكملها أو اكتب **إيقاف** لإنهائها.")
+            await message.channel.send(" هناك لعبة جارية بالفعل في هذه الروم أكملها أو اكتب **إيقاف** لإنهائها .")
             return
 
         item = random.choice(GAMES_DATA[clean_command])
