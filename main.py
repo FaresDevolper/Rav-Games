@@ -3,6 +3,7 @@ import io
 import os
 import random
 import threading
+import json
 import discord
 from discord.ext import commands
 from flask import Flask
@@ -26,7 +27,39 @@ def keep_alive():
     t.daemon = True
     t.start()
 
-# --- 2. إعدادات البوت والـ Intents ---
+# --- 2. إدارة ملف النقاط (points.json) ---
+POINTS_FILE = "points.json"
+
+def load_points():
+    if os.path.exists(POINTS_FILE):
+        try:
+            with open(POINTS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading points file: {e}")
+            return {}
+    return {}
+
+def save_points(points_data):
+    try:
+        with open(POINTS_FILE, "w", encoding="utf-8") as f:
+            json.dump(points_data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"Error saving points file: {e}")
+
+# قاموس النقاط في الذاكرة
+user_points = load_points()
+
+def add_user_points(user_id, points_to_add):
+    uid = str(user_id)
+    user_points[uid] = user_points.get(uid, 0) + points_to_add
+    save_points(user_points)
+    return user_points[uid]
+
+def get_user_points(user_id):
+    return user_points.get(str(user_id), 0)
+
+# --- 3. إعدادات البوت والـ Intents ---
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
@@ -55,7 +88,7 @@ def get_arabic_font(size):
 
 active_games = {} # {channel_id: {"game": "...", "answers": [...], "task": Task}}
 
-# --- 3. قاعدة بيانات ضخمة للألعاب (أكثر من 35 خياراً لكل لعبة) ---
+# --- 4. قاعدة البيانات الضخمة للألعاب ---
 GAMES_DATA = {
     "حيوان": [
         {"prompt": "بحرف أ", "answers": ["أسد", "أرنب", "أفعى", "أبو بريص", "أربد"]},
@@ -242,47 +275,10 @@ GAMES_DATA = {
         {"prompt": "فعالية", "answers": ["فعالية"]},
         {"prompt": "حماس", "answers": ["حماس"]},
         {"prompt": "نصر", "answers": ["نصر"]}
-    ],
-    "عكس": [
-        {"prompt": "سيرفر", "answers": ["رفريس"]},
-        {"prompt": "برمجة", "answers": ["ةجمرب"]},
-        {"prompt": "فارس", "answers": ["سراف"]},
-        {"prompt": "دسكورد", "answers": ["دروكسد"]},
-        {"prompt": "لعبة", "answers": ["ةبعل"]},
-        {"prompt": "سعودية", "answers": ["ةيدوعس"]},
-        {"prompt": "سريع", "answers": ["عيرس"]},
-        {"prompt": "حاسوب", "answers": ["بوساح"]},
-        {"prompt": "تحدي", "answers": ["يدحت"]},
-        {"prompt": "قهوة", "answers": ["ةوهق"]},
-        {"prompt": "مفتاح", "answers": ["حاتفم"]},
-        {"prompt": "قلم", "answers": ["ملق"]},
-        {"prompt": "كتاب", "answers": ["باتك"]},
-        {"prompt": "ساعة", "answers": ["عةاس"]},
-        {"prompt": "شاشة", "answers": ["ةشاش"]},
-        {"prompt": "ماوس", "answers": ["سوام"]},
-        {"prompt": "ألعاب", "answers": ["باعلأ"]},
-        {"prompt": "سماء", "answers": ["ءامس"]},
-        {"prompt": "قمر", "answers": ["رمق"]},
-        {"prompt": "شمس", "answers": ["سمش"]},
-        {"prompt": "نجم", "answers": ["مجن"]},
-        {"prompt": "بحر", "answers": ["رحب"]},
-        {"prompt": "جبل", "answers": ["لبج"]},
-        {"prompt": "نهر", "answers": ["رهن"]},
-        {"prompt": "ورقة", "answers": ["ةقرو"]},
-        {"prompt": "تفاح", "answers": ["حافت"]},
-        {"prompt": "عنب", "answers": ["بنع"]},
-        {"prompt": "موز", "answers": ["زوم"]},
-        {"prompt": "صقر", "answers": ["رقص"]},
-        {"prompt": "نمر", "answers": ["رمن"]},
-        {"prompt": "أسد", "answers": ["دسا"]},
-        {"prompt": "جمل", "answers": ["لمج"]},
-        {"prompt": "حصان", "answers": ["ناصح"]},
-        {"prompt": "طائرة", "answers": ["ةرئاط"]},
-        {"prompt": "سيارة", "answers": ["ةرايس"]}
     ]
 }
 
-# --- 4. معالجة النص العربي ورسم الصورة ---
+# --- 5. معالجة النص العربي ورسم الصورة ---
 def process_arabic_text(text):
     return arabic_reshaper.reshape(text)
 
@@ -318,14 +314,14 @@ def generate_game_image(game_name, prompt_text):
     img_byte_arr.seek(0)
     return img_byte_arr
 
-# --- 5. دالة مؤقت الـ 7 ثوانٍ ---
+# --- 6. دالة مؤقت الـ 7 ثوانٍ ---
 async def game_timer(channel, channel_id):
     await asyncio.sleep(7)
     if channel_id in active_games:
         del active_games[channel_id]
         await channel.send("⏱️ **انتهى الوقت!** لم يقم أحد بالإجابة الصحيحة.")
 
-# --- 6. الأحداث والأوامر ---
+# --- 7. الأحداث والأوامر ---
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user.name}")
@@ -338,29 +334,34 @@ async def on_message(message):
     channel_id = message.channel.id
     text = message.content.strip()
 
-    # --- أمر قائمة الألعاب ---
+    # --- أمر عرض قائمة الألعاب ---
     if text in ["ألعاب", "العاب", "-ألعاب", "-العاب"]:
-        games_list = "🎮 **قائمة الألعاب المتوفرة:**\n"
+        games_list = "🎮 ** قائمة الألعاب المتوفرة :**\n"
         for g in GAMES_DATA.keys():
             games_list += f"• `{g}`\n"
-        games_list += "\nلتشغيل أي لعبة، اكتب اسم اللعبة مباشرة في الروم (مثال: `حيوان` أو `عكس`).\n⏱️ لديك **7 ثوانٍ** فقط للإجابة!\nلإيقاف أي لعبة جارية، اكتب `إيقاف`."
+        games_list += "\nلتشغيل أي لعبة، اكتب اسم اللعبة مباشرة في الروم (مثال: `حيوان` أو `جماد`) .\n⏱️ لديك **7 ثوانٍ** فقط للإجابة!\n🎯 لمعرفة نقاطك اكتب `نقاطي`. \nلإيقاف أي لعبة جارية ، اكتب `إيقاف`."
         await message.channel.send(games_list)
+        return
+
+    # --- أمر عرض نقاط العضو ---
+    if text in ["نقاطي", "-نقاطي"]:
+        pts = get_user_points(message.author.id)
+        await message.channel.send(f"🏆 {message.author.mention} نقاطك هي: **{pts}** نقطة.")
         return
 
     # --- أمر إيقاف اللعبة ---
     if text in ["إيقاف", "ايقاف", "وقف"]:
         if channel_id in active_games:
-            # إلغاء المؤقت الجاري
             task = active_games[channel_id].get("task")
             if task and not task.done():
                 task.cancel()
             del active_games[channel_id]
-            await message.channel.send("🛑 تم إيقاف اللعبة الحالية بنجاح.")
+            await message.channel.send(" تم إيقاف اللعبة الحالية .")
         else:
-            await message.channel.send("⚠️ لا توجد لعبة شغالّة حالياً في هذه الروم.")
+            await message.channel.send(" لا توجد لعبة شغالّة حالياً في هذه الروم.")
         return
 
-    # --- التحقق من الأجوبة ---
+    # --- التحقق من الأجوبة وإضافة النقاط ---
     if channel_id in active_games:
         game_info = active_games[channel_id]
         if text in game_info["answers"]:
@@ -369,21 +370,28 @@ async def on_message(message):
             if task and not task.done():
                 task.cancel()
             del active_games[channel_id]
-            await message.channel.send(f"• {message.author.mention} ✨ أجاب الإجابة الصحيحة")
+
+            # حساب إضافة نقاط عشوائية بين 10 و 30
+            earned_points = random.randint(10, 30)
+            total_pts = add_user_points(message.author.id, earned_points)
+
+            await message.channel.send(
+                f"• {message.author.mention} ☝🏻 إجابتك صحيحة!\n"
+                f"🎁 حصلت على **{earned_points}** نقطة! (إجمالي نقاطك: **{total_pts}** نقطة)"
+            )
             return
 
     # --- بدء الألعاب ---
     clean_command = text.lstrip("-")
     if clean_command in GAMES_DATA:
         if channel_id in active_games:
-            await message.channel.send("⚠️ هناك لعبة جارية بالفعل في هذه الروم أكملها أو اكتب **إيقاف** لإنهائها.")
+            await message.channel.send(" هناك لعبة جارية بالفعل في هذه الروم أكملها أو اكتب **إيقاف** لإنهائها.")
             return
 
         item = random.choice(GAMES_DATA[clean_command])
         prompt_text = item["prompt"]
         valid_answers = item["answers"]
 
-        # إنشاء مهمة المؤقت لـ 7 ثوانٍ
         timer_task = asyncio.create_task(game_timer(message.channel, channel_id))
 
         active_games[channel_id] = {
@@ -400,7 +408,7 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
-# --- 7. التشغيل ---
+# --- 8. التشغيل ---
 keep_alive()
 TOKEN = os.getenv("DISCORD_TOKEN")
 if TOKEN:
