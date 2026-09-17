@@ -34,8 +34,8 @@ intents.guilds = True
 
 bot = commands.Bot(command_prefix="-", intents=intents)
 
-# رابط خط عربي لتنزيله تلقائياً وضمان إظهار النصوص العربية بشكل صحيح
-FONT_URL = "https://github.com/google/fonts/raw/main/ofl/cairo/Cairo-Bold.ttf"
+# رابط مباشر لخط عربي يدعم الرسم في PIL بدون مشاكل
+FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/amiri/Amiri-Bold.ttf"
 CACHED_FONT_BYTES = None
 
 def get_arabic_font(size):
@@ -43,9 +43,17 @@ def get_arabic_font(size):
     try:
         if CACHED_FONT_BYTES is None:
             res = requests.get(FONT_URL, timeout=10)
-            CACHED_FONT_BYTES = res.content
-        return ImageFont.truetype(io.BytesIO(CACHED_FONT_BYTES), size)
-    except Exception:
+            if res.status_code == 200:
+                CACHED_FONT_BYTES = res.content
+        if CACHED_FONT_BYTES:
+            return ImageFont.truetype(io.BytesIO(CACHED_FONT_BYTES), size)
+    except Exception as e:
+        print(f"Font download error: {e}")
+    
+    # محاولة استخدام الخط المحلي في نظام التشغيل إن وجد
+    try:
+        return ImageFont.truetype("arial.ttf", size)
+    except IOError:
         return ImageFont.load_default()
 
 # متغير لمعرفة الألعاب النشطة بكل قناة
@@ -97,32 +105,32 @@ def generate_game_image(game_name, prompt_text):
     img = Image.new("RGB", (img_w, img_h), (0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # تحميل الخطوط
-    font_main = get_arabic_font(42)
-    font_header = get_arabic_font(26)
+    # أحجام الخطوط
+    font_main = get_arabic_font(48)
+    font_header = get_arabic_font(30)
 
-    # الألوان بنفس طراز الصورة الزيتونية
-    main_banner_color = (130, 142, 107)  # اللون الزيتوني الأخضر للمستطيل الرئيسي
-    header_box_color = (150, 162, 125)   # اللون الفاتح لمربع اسم اللعبة
-    text_color = (255, 255, 255)         # لون النص أبيض
+    # درجات لون البيج المطلوب
+    main_banner_color = (212, 196, 151)   # بيج فاتح للمستطيل في المنتصف
+    header_box_color = (150, 134, 93)     # بيج غامق للمربع أعلى اليمين
+    text_color = (20, 20, 20)             # لون داكن جداً للنص ليظهر بوضوح فوق البيج
 
-    # 1. رسم المستطيل الرئيسي في منتصف الصورة (للمطلوب)
-    main_rect = [180, 150, 620, 250]
-    draw.rounded_rectangle(main_rect, radius=15, fill=main_banner_color)
+    # 1. رسم المستطيل الرئيسي في المنتصف (للمطلوب)
+    main_rect = [180, 150, 620, 260]
+    draw.rounded_rectangle(main_rect, radius=20, fill=main_banner_color)
 
-    # 2. رسم مربع اسم اللعبة أعلى اليمين للمستطيل الرئيسي
-    header_rect = [530, 110, 640, 160]
-    draw.rounded_rectangle(header_rect, radius=12, fill=header_box_color)
+    # 2. رسم مربع اسم اللعبة أعلى اليمين
+    header_rect = [520, 100, 630, 160]
+    draw.rounded_rectangle(header_rect, radius=15, fill=header_box_color)
 
     # تجهيز النص العربي
     arabic_game_name = process_arabic_text(game_name)
     arabic_prompt = process_arabic_text(prompt_text)
 
     # 3. كتابة اسم اللعبة داخل المربع الأيمن العلوي
-    draw.text((585, 135), arabic_game_name, fill=text_color, font=font_header, anchor="mm")
+    draw.text((575, 130), arabic_game_name, fill=(255, 255, 255), font=font_header, anchor="mm")
 
     # 4. كتابة المطلوب في المنتصف
-    draw.text((400, 200), arabic_prompt, fill=text_color, font=font_main, anchor="mm")
+    draw.text((400, 205), arabic_prompt, fill=text_color, font=font_main, anchor="mm")
 
     # حفظ الصورة في الذاكرة
     img_byte_arr = io.BytesIO()
@@ -145,10 +153,10 @@ async def on_message(message):
 
     # --- أمر قائمة الألعاب ---
     if text in ["ألعاب", "العاب", "-ألعاب", "-العاب"]:
-        games_list = "🎮 **قائمة الألعاب المتوفر ة :**\n"
+        games_list = "🎮 ** قائمة الألعاب المتوفرة :**\n"
         for g in GAMES_DATA.keys():
             games_list += f"• `{g}`\n"
-        games_list += "\nلتشغيل أي لعبة ، اكتب اسم اللعبة مباشرة في الروم (مثال : `حيوان` أو `جماد`) .\nلإيقاف أي لعبة جارية ، اكتب `إيقاف`."
+        games_list += "\nلتشغيل أي لعبة ، اكتب اسم اللعبة مباشرة في الروم (مثال: `حيوان` أو `جماد`) .\nلإيقاف أي لعبة جارية، اكتب `إيقاف`."
         await message.channel.send(games_list)
         return
 
@@ -173,7 +181,7 @@ async def on_message(message):
     clean_command = text.lstrip("-")
     if clean_command in GAMES_DATA:
         if channel_id in active_games:
-            await message.channel.send(" هناك لعبة جارية بالفعل في هذه الروم أكملها أو اكتب **إيقاف** لإنهائها.")
+            await message.channel.send(" هناك لعبة جارية بالفعل في هذه الروم أكملها أو اكتب **إيقاف** لإنهائها .")
             return
 
         item = random.choice(GAMES_DATA[clean_command])
