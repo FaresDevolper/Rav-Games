@@ -36,9 +36,24 @@ bot = commands.Bot(command_prefix="-", intents=intents)
 
 # رابط الصورة القالب
 TEMPLATE_IMAGE_URL = "https://cdn.discordapp.com/attachments/1339684080224174141/1549947325726855228/IMG_9132.jpg?ex=6aac8c6f&is=6aab3aef&hm=bdcad42dbf991be28caf06f73ae1d32441d8855e10bc51c363c6d93b3f8d72fb&"
+# رابط خط عربي لتنزيله تلقائياً وضمان إظهار النصوص
+FONT_URL = "https://github.com/google/fonts/raw/main/ofl/cairo/Cairo-Bold.ttf"
 
-# متغیر لمعرفة الألعاب النشطة بكل قناة
-active_games = {}  # {channel_id: {"game": "حيوان", "answer": "فهد", "task": task_obj}}
+# متغيرات للتحميل والاحتفاظ في الذاكرة
+CACHED_FONT_BYTES = None
+
+def get_arabic_font(size):
+    global CACHED_FONT_BYTES
+    try:
+        if CACHED_FONT_BYTES is None:
+            res = requests.get(FONT_URL)
+            CACHED_FONT_BYTES = res.content
+        return ImageFont.truetype(io.BytesIO(CACHED_FONT_BYTES), size)
+    except Exception:
+        return ImageFont.load_default()
+
+# متغير لمعرفة الألعاب النشطة بكل قناة
+active_games = {}  # {channel_id: {"game": "حيوان", "answers": [...]}}
 
 # قاعدة بيانات للألعاب والكلمات/الحروف
 GAMES_DATA = {
@@ -83,31 +98,30 @@ def process_arabic_text(text):
 def generate_game_image(game_name, prompt_text):
     # تحميل الصورة القالب
     response = requests.get(TEMPLATE_IMAGE_URL)
-    img = Image.open(io.BytesIO(response.content)).convert("RGB")
+    raw_img = Image.open(io.BytesIO(response.content)).convert("RGBA")
+
+    # إنشــاء خلفية سوداء بالكامل بنفس حجم القالب
+    black_bg = Image.new("RGBA", raw_img.size, (0, 0, 0, 255))
+    img = Image.alpha_composite(black_bg, raw_img).convert("RGB")
     draw = ImageDraw.Draw(img)
 
-    # اختيار خط افتراضي (أو تحميل خط عربي إذا توفر)
-    try:
-        font_main = ImageFont.truetype("arial.ttf", 45)
-        font_header = ImageFont.truetype("arial.ttf", 30)
-    except IOError:
-        font_main = ImageFont.load_default()
-        font_header = ImageFont.load_default()
+    # تحميل الخطوط العربية بالحجم المناسب
+    font_main = get_arabic_font(42)      # للنص العربي في المنتصف
+    font_header = get_arabic_font(28)    # لاسم اللعبة في المربع الأيمن
 
     # تجهيز النصوص العربية
     arabic_game_name = process_arabic_text(game_name)
     arabic_prompt = process_arabic_text(prompt_text)
 
-    # 1. كتابة اسم اللعبة في المربع الصغير (أعلى اليمين)
-    # الإحداثيات تقريبية وتناسب مكان المربع الداكن في صورتك
-    draw.text((820, 360), arabic_game_name, fill=(255, 255, 255), font=font_header, anchor="mm")
+    # 1. كتابة اسم اللعبة في المربع الأيمن العلوي
+    draw.text((825, 362), arabic_game_name, fill=(255, 255, 255), font=font_header, anchor="mm")
 
-    # 2. كتابة المطلوب في المنتصف (المستطيل الفاتح)
+    # 2. كتابة المطلوب في المستطيل الفاتح في المنتصف
     draw.text((500, 480), arabic_prompt, fill=(255, 255, 255), font=font_main, anchor="mm")
 
-    # حفظ الصورة في الذاكرة لإرسالها للديسكورد
+    # حفظ الصورة في الذاكرة بصيغة PNG
     img_byte_arr = io.BytesIO()
-    img.save(img_byte_arr, format='JPEG')
+    img.save(img_byte_arr, format='PNG')
     img_byte_arr.seek(0)
     return img_byte_arr
 
@@ -124,48 +138,52 @@ async def on_message(message):
     channel_id = message.channel.id
     text = message.content.strip()
 
+    # --- أمر عرض جميع الألعاب ---
+    if text in ["ألعاب", "العاب", "-ألعاب", "-العاب"]:
+        games_list = "🎮 **قائمة الألعاب المتوفرة:**\n"
+        for g in GAMES_DATA.keys():
+            games_list += f"• `{g}`\n"
+        games_list += "\nلتشغيل أي لعبة، اكتب اسم اللعبة مباشرة في الروم (مثال: `حيوان` أو `جماد`).\nلإيقاف أي لعبة جارية، اكتب `إيقاف`."
+        await message.channel.send(games_list)
+        return
+
     # --- أمر إيقاف اللعبة ---
     if text in ["إيقاف", "ايقاف", "وقف"]:
         if channel_id in active_games:
             del active_games[channel_id]
-            await message.channel.send(" تم إيقاف اللعبة الحالية بنجاح.")
+            await message.channel.send("🛑 تم إيقاف اللعبة الحالية بنجاح.")
         else:
-            await message.channel.send(" لا توجد لعبة شغالّة حالياً في هذه الروم.")
+            await message.channel.send("⚠️ لا توجد لعبة شغالّة حالياً في هذه الروم.")
         return
 
     # --- التحقق من الأجوبة أثناء اللعبة الشغالة ---
     if channel_id in active_games:
         game_info = active_games[channel_id]
-        # إذا كانت الإجابة صحيحة
         if text in game_info["answers"]:
             del active_games[channel_id]
-            await message.channel.send(f"• {message.author.mention} ☝🏻 أجاب الإجابة الصحيحة")
+            await message.channel.send(f"• {message.author.mention} ✨ أجاب الإجابة الصحيحة")
             return
 
     # --- بدء الألعاب (بدون بادئة أو مع البادئة -) ---
     clean_command = text.lstrip("-")
     if clean_command in GAMES_DATA:
-        # إذا كانت هناك لعبة شغالة بالأصل
         if channel_id in active_games:
-            await message.channel.send(" هناك لعبة جارية بالفعل في هذه الروم أكملها أو اكتب **إيقاف** لإنهائها.")
+            await message.channel.send("⚠️ هناك لعبة جارية بالفعل في هذه الروم أكملها أو اكتب **إيقاف** لإنهائها.")
             return
 
-        # اختيار سؤال عشوائي
         item = random.choice(GAMES_DATA[clean_command])
         prompt_text = item["prompt"]
         valid_answers = item["answers"]
 
-        # حفظ بيانات اللعبة القائمة
         active_games[channel_id] = {
             "game": clean_command,
             "answers": valid_answers
         }
 
-        # توليد وإرسال الصورة
         async with message.channel.typing():
             loop = asyncio.get_event_loop()
             img_bytes = await loop.run_in_executor(None, generate_game_image, clean_command, prompt_text)
-            file = discord.File(fp=img_bytes, filename="game.jpg")
+            file = discord.File(fp=img_bytes, filename="game.png")
             await message.channel.send(file=file)
 
     await bot.process_commands(message)
@@ -174,4 +192,4 @@ async def on_message(message):
 keep_alive()
 TOKEN = os.getenv("DISCORD_TOKEN")
 if TOKEN:
-    bot.run(TOKEN)
+    bot.run(TOKEN)        # 
