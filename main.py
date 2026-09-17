@@ -70,8 +70,7 @@ FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/amiri/Amiri-
 CACHED_FONT_BYTES = None
 
 # رابط صورتك الخاصة لخلفية قائمة التوب
-BACKGROUND_IMAGE_URL = "https://cdn.discordapp.com/attachments/1339684080224174141/1550204035762622606/IMG_9161.jpg?ex=6aad7b83&is=6aac2a03&hm=77cbcc8bd991e297cced7c2c21d9696c5d090f882b20b98e4d8e620ecc25bce3"
-
+BACKGROUND_IMAGE_URL = "https://cdn.discordapp.com/attachments/1339684080224174141/1550213616387493888/IMG_9162.jpg?ex=6aad846f&is=6aac32ef&hm=8cbfa43dfc41535347d197d8adc9285f54d406fe8bd283ae19c7fad8b5851bbc"
 def get_arabic_font(size):
     global CACHED_FONT_BYTES
     try:
