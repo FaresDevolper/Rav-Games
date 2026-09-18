@@ -446,7 +446,7 @@ def generate_top_image(top_users_data):
     font_title = get_arabic_font(40)
     font_list = get_arabic_font(26)
 
-    title_text = process_arabic_text("🏆 قائمة المتصدرين")
+    title_text = process_arabic_text(" قائمة المتصدرين بالنقاط الالعاب ")
     draw.text((400, 110), title_text, fill=(255, 215, 0), font=font_title, anchor="mm")
 
     start_y = 170
@@ -486,19 +486,19 @@ async def on_message(message):
     # --- أمر عرض قائمة الألعاب ---
     if text in ["ألعاب", "العاب", "-ألعاب", "-العاب"]:
         embed = discord.Embed(
-            title="🎮 قائمة الألعاب المتوفرة",
+            title="🎮 قائمة الألعاب ",
             color=discord.Color.gold()
         )
         
         games_list = "\n".join([f"• `{g}`" for g in GAMES_DATA.keys()])
-        embed.add_field(name="الألعاب الشغالة:", value=games_list, inline=False)
+        embed.add_field(name=" الألعاب المتوفرة :", value=games_list, inline=False)
         
         instructions = (
-            "• لتشغيل أي لعبة، اكتب اسم اللعبة مباشرة في الروم (مثال: `حيوان` أو `عواصم` أو `فكك`).\n"
-            "• لديك **7 ثوانٍ** فقط للإجابة.\n"
-            "• لمعرفة نقاطك اكتب `نقاطي # `.\n"
+            "• لتشغيل أي لعبة ، اكتب اسم اللعبة مباشرة في الروم (مثال : `حيوان` أو `عواصم` أو `فكك`) .\n"
+            "• لديك **7 ثوانٍ** فقط للإجابة .\n"
+            "• لمعرفة نقاطك اكتب `نقاطي`.\n"
             "• لعرض التوب اكتب `top` أو `توب`.\n"
-            "• لإيقاف أي لعبة جارية، اكتب `إيقاف`."
+            "• لإيقاف أي لعبة جارية ، اكتب `إيقاف`."
         )
         embed.add_field(name="التعليمات:", value=instructions, inline=False)
         
