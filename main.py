@@ -485,11 +485,24 @@ async def on_message(message):
 
     # --- أمر عرض قائمة الألعاب ---
     if text in ["ألعاب", "العاب", "-ألعاب", "-العاب"]:
-        games_list = "🎮 **قائمة الألعاب المتوفرة:**\n"
-        for g in GAMES_DATA.keys():
-            games_list += f"• `{g}`\n"
-        games_list += "\nلتشغيل أي لعبة، اكتب اسم اللعبة مباشرة في الروم (مثال: `حيوان` أو `عواصم` أو `فكك`).\nلديك **7 ثوانٍ** فقط للإجابة.\nلمعرفة نقاطك اكتب `نقاطي`.\nلعرض التوب اكتب `top` أو `توب`.\nلإيقاف أي لعبة جارية، اكتب `إيقاف`."
-        await message.channel.send(games_list)
+        embed = discord.Embed(
+            title="🎮 قائمة الألعاب المتوفرة",
+            color=discord.Color.gold()
+        )
+        
+        games_list = "\n".join([f"• `{g}`" for g in GAMES_DATA.keys()])
+        embed.add_field(name="الألعاب الشغالة:", value=games_list, inline=False)
+        
+        instructions = (
+            "• لتشغيل أي لعبة، اكتب اسم اللعبة مباشرة في الروم (مثال: `حيوان` أو `عواصم` أو `فكك`).\n"
+            "• لديك **7 ثوانٍ** فقط للإجابة.\n"
+            "• لمعرفة نقاطك اكتب `نقاطي`.\n"
+            "• لعرض التوب اكتب `top` أو `توب`.\n"
+            "• لإيقاف أي لعبة جارية، اكتب `إيقاف`."
+        )
+        embed.add_field(name="التعليمات:", value=instructions, inline=False)
+        
+        await message.channel.send(embed=embed)
         return
 
     # --- أمر نقاطي ---
@@ -552,7 +565,7 @@ async def on_message(message):
 
             await message.channel.send(
                 f"• {message.author.mention} ☝🏻 إجابتك صحيحة \n"
-                f"✨ حصلت على **{earned_points}** نقطة  إجمالي نقاطك : **{total_pts}** نقطة "
+                f"✨ حصلت على **{earned_points}** إجمالي نقاطك : **{total_pts}** نقطة "
             )
             return
 
@@ -587,5 +600,4 @@ async def on_message(message):
 keep_alive()
 TOKEN = os.getenv("DISCORD_TOKEN")
 if TOKEN:
-    bot.run(TOKEN)
     bot.run(TOKEN)
